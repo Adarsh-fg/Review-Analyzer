@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>E-Commerce Review Analyzer</title>
+    <style>
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f8fafc;
+        color: #1e293b;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .container {
+        flex: 1;
+        {% comment %} max-width: 1200px; {% endcomment %}
+        {% comment %} margin: 16px auto; {% endcomment %}
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 32px);
+      }
+
+      h1 {
+        text-align: center;
+        color: #1e293b;
+        margin: 0 0 16px 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: -0.025em;
+      }
+
+      h2 {
+        color: #1e293b;
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin: 0 0 12px 0;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e2e8f0;
+      }
+
+      .review-form,
+      .reviews-list,
+      .analysis {
+        background: #ffffff;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        overflow-y: auto;
+        transition: box-shadow 0.2s ease;
+      }
+
+      .review-form {
+        padding: 20px;
+        margin-bottom: 16px;
+        max-height: 300px;
+      }
+
+      .review-form:hover,
+      .reviews-list:hover,
+      .analysis:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .review-form input,
+      .review-form textarea {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        box-sizing: border-box;
+      }
+
+      .review-form input:focus,
+      .review-form textarea:focus {
+        border-color: #2563eb;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      .review-form button,
+      #analyzeBtn {
+        background: #2563eb;
+        color: #ffffff;
+        padding: 10px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+        width: 100%;
+      }
+
+      .review-form button:hover,
+      #analyzeBtn:hover {
+        background: #1d4ed8;
+        transform: translateY(-1px);
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      .reviews-list {
+        padding: 20px;
+        max-height: 100%;
+        overflow-y: auto;
+      }
+
+      .analysis {
+        padding: 20px;
+        max-height: 100%;
+        overflow-y: auto;
+      }
+
+      .review {
+        border: 1px solid #e2e8f0;
+        padding: 12px;
+        margin-bottom: 12px;
+        border-radius: 6px;
+        background: #ffffff;
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+      }
+
+      .review:hover {
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        transform: translateY(-2px);
+      }
+
+      .review strong {
+        font-size: 1rem;
+        color: #1e293b;
+        font-weight: 600;
+      }
+
+      .stars {
+        color: #f59e0b;
+        margin: 4px 0;
+        font-size: 0.95rem;
+      }
+
+      .analysis h3 {
+        margin: 12px 0 8px;
+        color: #1e293b;
+        font-size: 1rem;
+        font-weight: 500;
+      }
+
+      .analysis ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .analysis li {
+        background: #f8fafc;
+        margin: 6px 0;
+        padding: 10px;
+        border-radius: 6px;
+        border-left: 3px solid #2563eb;
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          margin: 12px;
+          padding: 16px;
+          height: calc(100vh - 24px);
+        }
+
+        .content-grid {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
+
+        .review-form,
+        .reviews-list,
+        .analysis {
+          max-height: 280px;
+        }
+
+        h1 {
+          font-size: 1.5rem;
+        }
+
+        h2 {
+          font-size: 1.1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>E-Commerce Review Analyzer</h1>
+
+      <div class="review-form">
+        <h2>Submit a Review</h2>
+        <form id="reviewForm">
+          <input
+            type="text"
+            id="reviewerName"
+            placeholder="Your Name"
+            required
+          />
+          <label for="rating">Rating (1-5):</label>
+          <input type="number" id="rating" min="1" max="5" required />
+          <textarea
+            id="reviewText"
+            placeholder="Write your review here..."
+            required
+          ></textarea>
+          <button type="submit">Submit Review</button>
+        </form>
+      </div>
+
+      <div class="content-grid">
+        <div class="reviews-list">
+          <h2>All Reviews</h2>
+          <div id="reviewsContainer"></div>
+        </div>
+
+        <div class="analysis">
+          <h2>Analysis Results</h2>
+          <button id="analyzeBtn">Analyze Reviews</button>
+          <div id="analysisResult"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const reviewForm = document.getElementById("reviewForm");
+        const reviewsContainer = document.getElementById("reviewsContainer");
+        const analyzeBtn = document.getElementById("analyzeBtn");
+        const analysisResult = document.getElementById("analysisResult");
+        const apiUrl = "/api/reviews/";
+        const analyzeUrl = "/api/analyze/";
+
+        // Fetch and display all reviews
+        function fetchReviews() {
+          fetch(apiUrl)
+            .then((response) => response.json())
+            .then((data) => {
+              reviewsContainer.innerHTML = "";
+              data.forEach((review) => {
+                const reviewElement = document.createElement("div");
+                reviewElement.className = "review";
+                reviewElement.innerHTML = `
+                <strong>${review.reviewer_name}</strong>
+                <div class="stars">${"★".repeat(review.rating)}${"☆".repeat(
+                  5 - review.rating
+                )}</div>
+                <p>${review.review_text}</p>
+              `;
+                reviewsContainer.appendChild(reviewElement);
+              });
+            });
+        }
+
+        // Submit a new review
+        reviewForm.addEventListener("submit", function (e) {
+          e.preventDefault();
+          const newReview = {
+            reviewer_name: document.getElementById("reviewerName").value,
+            rating: parseInt(document.getElementById("rating").value),
+            review_text: document.getElementById("reviewText").value,
+          };
+
+          fetch(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": getCookie("csrftoken"),
+            },
+            body: JSON.stringify(newReview),
+          })
+            .then((response) => response.json())
+            .then(() => {
+              fetchReviews();
+              reviewForm.reset();
+            });
+        });
+
+        // Analyze reviews
+        analyzeBtn.addEventListener("click", function () {
+          analysisResult.innerHTML = "Analyzing...";
+          fetch(analyzeUrl, {
+            method: "POST",
+            headers: {
+              "X-CSRFToken": getCookie("csrftoken"),
+            },
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              analysisResult.innerHTML = `
+            <h3>Top Praise Points:</h3>
+            <ul>
+              ${data.top_praise_points.map((p) => `<li>${p}</li>`).join("")}
+            </ul>
+            <h3>Top Complaint Points:</h3>
+            <ul>
+              ${data.top_complaint_points.map((c) => `<li>${c}</li>`).join("")}
+            </ul>
+            <h3>Overall Rating Suggestion:</h3>
+            <p>${data.overall_rating_suggestion}</p>
+            <h3>Actionable Recommendation:</h3>
+            <p>${data.actionable_recommendation}</p>
+          `;
+            });
+        });
+
+        // Function to get CSRF token
+        function getCookie(name) {
+          let cookieValue = null;
+          if (document.cookie && document.cookie !== "") {
+            const cookies = document.cookie.split(";");
+            for (let i = 0; i < cookies.length; i++) {
+              const cookie = cookies[i].trim();
+              if (cookie.substring(0, name.length + 1) === name + "=") {
+                cookieValue = decodeURIComponent(
+                  cookie.substring(name.length + 1)
+                );
+                break;
+              }
+            }
+          }
+          return cookieValue;
+        }
+
+        // Initial fetch of reviews
+        fetchReviews();
+      });
+    </script>
+  </body>
+</html>
