@@ -14,31 +14,39 @@ print("Model loaded successfully.")
 
 def generate_recommendation_from_complaints(complaints):
     """
-    Generates a rule-based recommendation by searching for keywords in complaint texts.
-    This is a stable and deterministic alternative to an unstable summarizer.
+    Generates a list of up to 3 actionable recommendations by searching for keywords.
     """
-    # Combine all complaint texts into one string for easy searching
     full_complaint_text = " ".join(complaints).lower()
 
-    # Define keywords and their corresponding recommendations
     recommendation_map = {
         ("service", "support", "responsive", "refund", "runaround"): "Investigate and improve customer service response times and refund processes.",
         ("shipping", "delivery", "packaging", "arrived", "damaged"): "Review and improve the shipping and packaging process to prevent damage.",
         ("instructions", "manual", "confusing", "setup", "hard to follow"): "Rewrite or create a video guide for the product setup process to improve clarity.",
         ("battery", "charge", "drains"): "Investigate the product's battery performance and longevity.",
         ("slow", "performance", "buggy", "crashes"): "Prioritize software updates to fix bugs and improve performance.",
-        ("broken", "defective", "stopped working", "abysmal"): "Improve quality control checks before the product is shipped.",
+        ("broken", "defective", "stopped working", "abysmal", "quality"): "Improve quality control checks before the product is shipped.",
+        ("misleading", "advertising", "compatible"): "Ensure product descriptions are accurate and compatibility information is clear.",
+        ("overheated", "safety"): "Urgently investigate potential product safety and overheating issues."
     }
 
-    # Find the first matching keyword set and return the recommendation
+    # Use a set to automatically handle finding multiple keywords for the same recommendation
+    found_recommendations = set()
+
+    # Loop through all rules to find every match, don't stop after the first one
     for keywords, recommendation in recommendation_map.items():
         if any(keyword in full_complaint_text for keyword in keywords):
-            return recommendation
+            found_recommendations.add(recommendation)
             
-    # Fallback if no specific keywords are found
-    return "Address the key issues raised in the detailed complaint points."
+    # Convert the set to a list and limit to the top 3 found
+    final_recommendations = list(found_recommendations)[:3]
 
-
+    # Return the list of recommendations, or a fallback message inside a list
+    if final_recommendations:
+        return final_recommendations
+    else:
+        return ["Address the key issues raised in the detailed complaint points."]
+    
+    
 def analyze_reviews_with_ai(reviews_text):
     """
     Analyzes reviews using a definitive, stable, and AI-augmented approach:
