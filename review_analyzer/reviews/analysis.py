@@ -4,60 +4,69 @@ import google.generativeai as genai
 from transformers import pipeline
 from dotenv import load_dotenv
 
-# --- Load Environment Variables (for the API Key) ---
 load_dotenv()
 
-# --- Initialize Our TWO Specialist AI Models ---
-
-# Model 1 (for Ratings and Categorization): 100% reliable.
+# Model 1 (for Ratings and Categorization):
 print("Loading sentiment analysis model...")
 sentiment_pipeline = pipeline(
     "text-classification",
     model="nlptown/bert-base-multilingual-uncased-sentiment"
 )
 
-# Model 2 (for Recommendation): The powerful Gemini Pro model.
-print("Configuring Gemini Pro model...")
+# Model 2 (for Recommendation): The powerful Gemini model.
+print("Configuring Gemini model...")
 try:
-    # It's a good practice to check if the key exists before configuring
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("GEMINI_API_KEY not found in .env file.")
     genai.configure(api_key=api_key)
     gemini_model = genai.GenerativeModel('gemini-1.5-flash-latest')
-    print("Gemini Pro model configured successfully.")
+    print("Gemini model configured successfully.")
 except Exception as e:
     print(f"CRITICAL ERROR configuring Gemini: {e}")
     gemini_model = None
 
 
-def generate_recommendation_with_gemini(complaints):
+def generate_recommendation_with_gemini(praise, complaints):
     """
-    Generates a single, actionable recommendation using the Google Gemini API,
-    with robust error logging to diagnose failures.
+    Generates an actionable recommendation using the Google Gemini API,
+    dynamically adjusting its prompt based on the sentiment of the feedback.
     """
     if not gemini_model:
-        return "Gemini model is not available. Please check API key configuration and server logs."
-        
-    if not complaints or "No complaint points" in complaints[0]:
-        return "No specific complaints were identified to generate a recommendation from."
+        return "Gemini model is not available. Please check API key configuration."
 
-    full_complaint_text = "\n- ".join(complaints)
+    NO_PRAISE_MSG = "No praise points found in 4-5 star reviews."
+    NO_COMPLAINTS_MSG = "No complaint points found in 1-2 star reviews."
 
-    # A slightly safer, more analytical prompt to avoid content filters.
-    prompt = f"""
-Analyze the following customer complaints and provide a single, actionable business recommendation.
+    has_praise = praise and praise[0] != NO_PRAISE_MSG
+    has_complaints = complaints and complaints[0] != NO_COMPLAINTS_MSG
 
-Complaints:
-- {full_complaint_text}
+    if not has_praise and not has_complaints:
+        return "Not enough specific feedback was provided to generate a recommendation."
 
-Recommendation:
-"""
+    prompt_parts = ["Analyze the following customer feedback and provide a concise, actionable business recommendation."]
+
+    if has_praise:
+        praise_text = "\n- ".join(praise)
+        prompt_parts.append(f"\nPositive Feedback (Strengths):\n- {praise_text}")
+
+    if has_complaints:
+        complaint_text = "\n- ".join(complaints)
+        prompt_parts.append(f"\nNegative Feedback (Areas for Improvement):\n- {complaint_text}")
+
+    if has_praise and not has_complaints:
+        prompt_parts.append("\nThe feedback is overwhelmingly positive. Provide an encouraging recommendation on how the business can continue to build on this success.")
+    elif not has_praise and has_complaints:
+        prompt_parts.append("\nThe feedback is negative. Focus the recommendation on addressing these critical issues.")
+    else: 
+        prompt_parts.append("\nThe feedback is mixed. Provide a balanced recommendation that leverages strengths to address weaknesses.")
+
+    prompt_parts.append("\nActionable Recommendation:")
+    prompt = "\n".join(prompt_parts)
 
     try:
         response = gemini_model.generate_content(prompt)
-        # It's possible the response is generated but is empty or blocked.
-        # We check the prompt_feedback for safety issues.
+        
         if not response.parts:
             if response.prompt_feedback.block_reason:
                 print(f"Gemini API Blocked Prompt. Reason: {response.prompt_feedback.block_reason}")
@@ -67,17 +76,14 @@ Recommendation:
 
         return response.text.strip()
     except Exception as e:
-        # --- THIS IS THE MOST IMPORTANT CHANGE ---
-        # We will now print the EXACT error message from the Gemini API.
-        print("\n--- GEMINI API ERROR ---")
-        print(f"The call to the Gemini API failed with a specific error: {e}")
-        print("--- END GEMINI API ERROR ---\n")
+        print(f"\n--- GEMINI API ERROR: {e} ---\n")
         return "Could not generate AI recommendation due to an API error. (Check server logs for details)."
 
 
 def analyze_reviews_with_ai(reviews_text):
     """
-    The main analysis function. (No changes needed here).
+    Analyzes a list of review texts, categorizes them, and generates
+    a comprehensive analysis including an AI-powered recommendation.
     """
     if not reviews_text:
         return {
@@ -93,7 +99,7 @@ def analyze_reviews_with_ai(reviews_text):
             predicted_ratings.append(rating)
             if rating >= 4:
                 positive_reviews.append(review)
-            elif rating <= 2:
+            else:
                 negative_reviews.append(review)
         except Exception as e:
             print(f"Error classifying a review: {e}")
@@ -106,10 +112,11 @@ def analyze_reviews_with_ai(reviews_text):
 
     positive_reviews.sort(key=len, reverse=True)
     negative_reviews.sort(key=len, reverse=True)
+
     top_praise_points = positive_reviews[:3] or ["No praise points found in 4-5 star reviews."]
     top_complaint_points = negative_reviews[:3] or ["No complaint points found in 1-2 star reviews."]
     
-    actionable_recommendation = generate_recommendation_with_gemini(top_complaint_points)
+    actionable_recommendation = generate_recommendation_with_gemini(top_praise_points, top_complaint_points)
 
     return {
         "top_praise_points": top_praise_points,
