@@ -32,22 +32,22 @@
       }
 
       .container {
-        width: 900px;
+        max-width: 900px; /* responsive */
         margin: 0 auto;
-        padding: 24px;
+        padding: 16px;
       }
 
       h1 {
         text-align: center;
         margin: 0 0 24px 0;
-        font-size: 1.75rem;
+        font-size: clamp(1.5rem, 4vw, 1.75rem);
         font-weight: 600;
         letter-spacing: -0.025em;
       }
 
       h2,
       h3 {
-        font-size: 1.125rem;
+        font-size: clamp(1rem, 3.5vw, 1.125rem);
         font-weight: 500;
         margin: 0 0 16px 0;
         padding-bottom: 8px;
@@ -96,8 +96,9 @@
 
       .action-buttons {
         display: flex;
+        flex-wrap: wrap;
         justify-content: center;
-        gap: 16px;
+        gap: 12px;
         margin-bottom: 24px;
       }
 
@@ -106,6 +107,8 @@
         color: var(--dark-color);
         border: 1px solid var(--border-color);
         box-shadow: var(--shadow-sm);
+        flex: 1 1 auto;
+        min-width: 140px;
       }
 
       .action-buttons button:hover {
@@ -130,7 +133,7 @@
         border-radius: 8px;
         border: 1px solid var(--border-color);
         box-shadow: var(--shadow-sm);
-        padding: 24px;
+        padding: 16px;
         height: 300px;
         display: flex;
         flex-direction: column;
@@ -155,6 +158,8 @@
       .stars {
         color: var(--star-color);
         margin: 4px 0;
+        font-size: 1rem;
+        white-space: nowrap;
       }
       .review p {
         margin: 8px 0 0 0;
@@ -176,7 +181,7 @@
         border-left: 3px solid var(--primary-color);
       }
 
-      /* Spinner for loading state */
+      /* Spinner */
       .spinner {
         border: 4px solid rgba(0, 0, 0, 0.1);
         width: 36px;
@@ -187,20 +192,39 @@
         margin: 40px auto;
       }
       @keyframes spin {
-        0% {
-          transform: rotate(0deg);
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .rating-warning {
+        color: var(--error-color);
+        font-size: 0.85rem;
+        height: 1.2em;
+        margin-bottom: 12px;
+      }
+
+      /* --- Responsive --- */
+      @media (max-width: 768px) {
+        .container { padding: 12px; }
+        .review-form { padding: 16px; }
+        .review-form input,
+        .review-form textarea {
+          font-size: 0.85rem;
+          padding: 8px;
         }
-        100% {
-          transform: rotate(360deg);
+        .action-buttons {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .action-buttons button {
+          width: 100%;
         }
       }
 
-      /* Style for the rating validation message */
-      .rating-warning {
-          color: var(--error-color);
-          font-size: 0.85rem;
-          height: 1.2em; /* Prevents layout shift */
-          margin-bottom: 12px;
+      @media (max-width: 480px) {
+        body { font-size: 0.9rem; }
+        h1 { font-size: 1.25rem; }
+        .review { padding: 12px 0; }
       }
     </style>
   </head>
@@ -212,22 +236,12 @@
           <h2>Submit a Review</h2>
           <form id="reviewForm">
             <label for="reviewerName" class="sr-only">Your Name</label>
-            <input
-              type="text"
-              id="reviewerName"
-              placeholder="Your Name"
-              required
-            />
+            <input type="text" id="reviewerName" placeholder="Your Name" required />
             <label for="rating">Rating (1-5):</label>
             <input type="number" id="rating" min="1" max="5" required />
-            <!-- Container for the warning message -->
             <div id="ratingWarning" class="rating-warning"></div>
             <label for="reviewText" class="sr-only">Review Text</label>
-            <textarea
-              id="reviewText"
-              placeholder="Write your review here..."
-              required
-            ></textarea>
+            <textarea id="reviewText" placeholder="Write your review here..." required></textarea>
             <button type="submit">Submit Review</button>
           </form>
         </div>
@@ -240,15 +254,12 @@
       </div>
 
       <section class="results-display">
-        <div id="resultsContainer">
-          <!-- Content will be dynamically inserted here -->
-        </div>
+        <div id="resultsContainer"></div>
       </section>
     </main>
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {
-        // --- DOM Elements ---
         const reviewForm = document.getElementById("reviewForm");
         const resultsContainer = document.getElementById("resultsContainer");
         const ratingInput = document.getElementById("rating");
@@ -259,28 +270,21 @@
           recommendation: document.getElementById("showRecommendationBtn"),
         };
 
-        // --- API Endpoints ---
         const apiUrl = "/api/reviews/";
         const analyzeUrl = "/api/analyze/";
 
-        // --- State Management ---
         let state = {
           reviews: [],
           analysisData: null,
           isLoading: false,
-          currentView: "reviews", // 'reviews', 'analysis', or 'recommendation'
+          currentView: "reviews",
         };
 
-        // --- RENDER FUNCTIONS ---
         function render() {
-          // Disable buttons during loading
-          Object.values(buttons).forEach(
-            (btn) => (btn.disabled = state.isLoading)
+          Object.values(buttons).forEach((btn) => (btn.disabled = state.isLoading));
+          Object.entries(buttons).forEach(([key, btn]) =>
+            btn.classList.toggle("active", key === state.currentView)
           );
-          // Highlight the active button
-          Object.entries(buttons).forEach(([key, btn]) => {
-            btn.classList.toggle("active", key === state.currentView);
-          });
 
           if (state.isLoading) {
             resultsContainer.innerHTML =
@@ -304,76 +308,59 @@
         function renderAllReviews() {
           let content = "<h2>All Reviews</h2>";
           if (!state.reviews || state.reviews.length === 0) {
-            content +=
-              "<p>No reviews submitted yet. Submit one above to get started!</p>";
+            content += "<p>No reviews submitted yet. Submit one above to get started!</p>";
           } else {
             state.reviews.forEach((review) => {
               content += `
-                        <div class="review">
-                            <strong>${review.reviewer_name}</strong>
-                            <div class="stars">${"★".repeat(
-                              review.rating
-                            )}${"☆".repeat(5 - review.rating)}</div>
-                            <p>${review.review_text}</p>
-                        </div>
-                    `;
+                <div class="review">
+                  <strong>${review.reviewer_name}</strong>
+                  <div class="stars">${"★".repeat(review.rating)}${"☆".repeat(5 - review.rating)}</div>
+                  <p>${review.review_text}</p>
+                </div>
+              `;
             });
           }
           resultsContainer.innerHTML = content;
         }
 
         function renderAnalysis() {
-          if (!state.analysisData) {
-            return;
-          } // Should not happen if logic is correct
+          if (!state.analysisData) return;
           resultsContainer.innerHTML = `
-                <h2>Analysis Results</h2>
-                <h3>Top Praise Points:</h3>
-                <ul>${state.analysisData.top_praise_points
-                  .map((p) => `<li>${p}</li>`)
-                  .join("")}</ul>
-                <h3>Top Complaint Points:</h3>
-                <ul>${state.analysisData.top_complaint_points
-                  .map((c) => `<li>${c}</li>`)
-                  .join("")}</ul>
-                <h3>Overall Rating Suggestion:</h3>
-                <p>${state.analysisData.overall_rating_suggestion}</p>
-            `;
+            <h2>Analysis Results</h2>
+            <h3>Top Praise Points:</h3>
+            <ul>${state.analysisData.top_praise_points.map((p) => `<li>${p}</li>`).join("")}</ul>
+            <h3>Top Complaint Points:</h3>
+            <ul>${state.analysisData.top_complaint_points.map((c) => `<li>${c}</li>`).join("")}</ul>
+            <h3>Overall Rating Suggestion:</h3>
+            <p>${state.analysisData.overall_rating_suggestion}</p>
+          `;
         }
 
         function renderRecommendation() {
-          if (!state.analysisData) {
-            return;
-          } // Should not happen
-          const isList = Array.isArray(
-            state.analysisData.actionable_recommendation
-          );
+          if (!state.analysisData) return;
+          const isList = Array.isArray(state.analysisData.actionable_recommendation);
           const recommendationHTML = isList
-            ? `<ul>${state.analysisData.actionable_recommendation
-                .map((r) => `<li>${r}</li>`)
-                .join("")}</ul>`
+            ? `<ul>${state.analysisData.actionable_recommendation.map((r) => `<li>${r}</li>`).join("")}</ul>`
             : `<p>${state.analysisData.actionable_recommendation}</p>`;
 
           resultsContainer.innerHTML = `
-                <h2>Actionable Recommendations</h2>
-                ${recommendationHTML}
-            `;
+            <h2>Actionable Recommendations</h2>
+            ${recommendationHTML}
+          `;
         }
 
-        // --- API CALL FUNCTIONS ---
         async function fetchReviews() {
           try {
             const response = await fetch(apiUrl);
             state.reviews = await response.json();
           } catch (error) {
             console.error("Failed to fetch reviews:", error);
-            resultsContainer.innerHTML =
-              "<p>Error: Could not load reviews.</p>";
+            resultsContainer.innerHTML = "<p>Error: Could not load reviews.</p>";
           }
         }
 
         async function fetchAnalysis() {
-          if (state.analysisData) return; // Don't re-fetch if we already have it
+          if (state.analysisData) return;
 
           state.isLoading = true;
           render();
@@ -386,34 +373,25 @@
             state.analysisData = await response.json();
           } catch (error) {
             console.error("Failed to fetch analysis:", error);
-            resultsContainer.innerHTML =
-              "<p>Error: Could not perform analysis.</p>";
+            resultsContainer.innerHTML = "<p>Error: Could not perform analysis.</p>";
           } finally {
             state.isLoading = false;
             render();
           }
         }
 
-        // --- EVENT LISTENERS ---
-
-        // NEW: Event listener for real-time rating validation
-        ratingInput.addEventListener("input", function() {
-            const ratingValue = parseInt(this.value, 10);
-            if (ratingValue > 5) {
-                ratingWarning.textContent = "Warning: Rating must be 5 or less.";
-            } else {
-                ratingWarning.textContent = ""; // Clear warning if valid
-            }
+        ratingInput.addEventListener("input", function () {
+          const ratingValue = parseInt(this.value, 10);
+          ratingWarning.textContent =
+            ratingValue > 5 ? "Warning: Rating must be 5 or less." : "";
         });
 
         reviewForm.addEventListener("submit", async function (e) {
           e.preventDefault();
-          
-          // MODIFIED: Add validation check before submitting
           const ratingValue = parseInt(ratingInput.value, 10);
           if (ratingValue > 5 || ratingValue < 1) {
-              alert("Please enter a rating between 1 and 5.");
-              return; // Stop the submission
+            alert("Please enter a rating between 1 and 5.");
+            return;
           }
 
           const submitButton = reviewForm.querySelector("button");
@@ -436,14 +414,13 @@
           });
 
           reviewForm.reset();
-          ratingWarning.textContent = ""; // Clear warning on successful submission
+          ratingWarning.textContent = "";
           submitButton.disabled = false;
           submitButton.textContent = "Submit Review";
 
-          // Refetch reviews and render them
           await fetchReviews();
           state.currentView = "reviews";
-          state.analysisData = null; // Invalidate old analysis
+          state.analysisData = null;
           render();
         });
 
@@ -454,17 +431,16 @@
 
         buttons.analysis.addEventListener("click", async () => {
           state.currentView = "analysis";
-          await fetchAnalysis(); // Will only fetch if data is not cached
+          await fetchAnalysis();
           render();
         });
 
         buttons.recommendation.addEventListener("click", async () => {
           state.currentView = "recommendation";
-          await fetchAnalysis(); // Will only fetch if data is not cached
+          await fetchAnalysis();
           render();
         });
 
-        // --- UTILITY FUNCTION ---
         function getCookie(name) {
           let cookieValue = null;
           if (document.cookie && document.cookie !== "") {
@@ -472,9 +448,7 @@
             for (let i = 0; i < cookies.length; i++) {
               const cookie = cookies[i].trim();
               if (cookie.substring(0, name.length + 1) === name + "=") {
-                cookieValue = decodeURIComponent(
-                  cookie.substring(name.length + 1)
-                );
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                 break;
               }
             }
@@ -482,7 +456,6 @@
           return cookieValue;
         }
 
-        // --- INITIAL PAGE LOAD ---
         async function initialize() {
           await fetchReviews();
           render();
