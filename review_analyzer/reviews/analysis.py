@@ -11,8 +11,9 @@ load_dotenv()
 
 # Keywords for the new helper functions
 NEGATIVE_KEYWORDS = [
-    "not", "bad", "poor", "disappointed", "terrible", "worst", "problem",
-    "issue", "broke", "fail", "didn't", "can't", "won't", "error"
+    "broken", "damaged", "defective", "scratched", "wrong size",
+    "late", "delay", "missing", "fake", "cheap", "scam", "fraud",
+    "expensive", "not worth", "refund", "waste of money"
 ]
 
 # Model 1 (for Ratings and Categorization):
